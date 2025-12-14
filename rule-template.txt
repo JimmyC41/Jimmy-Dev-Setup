@@ -1,0 +1,17 @@
+---
+description: Brief description of when/why this rule applies
+globs:
+  - "path/pattern/**/*.extension"
+alwaysApply: false
+---
+
+# Rule Title
+
+## Section Name
+Your instructions and guidelines here
+
+## Another Section
+More content
+
+## Examples (optional)
+Show examples if helpful
