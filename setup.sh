@@ -3,6 +3,17 @@
 echo "🚀 Setting up development environment..."
 
 # ============================================
+# Install zoxide if not present
+# ============================================
+if ! command -v zoxide &> /dev/null; then
+    echo "\n📦 Installing zoxide..."
+    curl -sS https://raw.githubusercontent.com/ajeetdsouza/zoxide/main/install.sh | bash
+    echo "✅ Zoxide installed"
+else
+    echo "\n✅ Zoxide already installed"
+fi
+
+# ============================================
 # Git Configuration
 # ============================================
 echo "\n📝 Configuring Git..."
@@ -88,16 +99,11 @@ echo "✅ Cursor settings configured"
 # ============================================
 echo "\n🔍 Verifying setup..."
 
-# Check git config
 echo "\nGit aliases:"
 git config --global --get-regexp alias
 
-# Check if zoxide is installed
-if command -v zoxide &> /dev/null; then
-    echo "✅ Zoxide is installed"
-else
-    echo "⚠️  Zoxide not found. Install with: curl -sS https://raw.githubusercontent.com/ajeetdsouza/zoxide/main/install.sh | bash"
-fi
+echo "\nZoxide version:"
+zoxide --version
 
 # ============================================
 # Finish
@@ -105,6 +111,5 @@ fi
 echo "\n✨ Setup complete!"
 echo "\n📌 Next steps:"
 echo "1. Restart your terminal or run: source ~/.zshrc"
-echo "2. Install zoxide if not already installed"
-echo "3. Test aliases: git st, git lg, cmaked, etc."
+echo "2. Test aliases: git st, git lg, cmaked, z <directory>"
 echo "\n💡 Your old .zshrc was backed up with timestamp"
