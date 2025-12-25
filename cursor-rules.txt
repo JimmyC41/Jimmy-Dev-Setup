@@ -1,5 +1,45 @@
-# Unit Test Rules for GTest
+# System Design Rules
 
+## Dependency Encapsulation
+- Public APIs must not mention third-party types.
+- Each third-party library must be confined to one adapter/impl module.
+
+## Interface Segregation Principle (ISP)
+- No interface may require methods a consumer doesn’t use.
+
+## Dependency Inversion Principle (DIP)
+- High-level code owns the interfaces; low-level details implement the interfaces.
+- High-level code must not #include concrete implementation headers. Instead, wire dependencies via constructor or factory injection.
+
+# Design Patterns
+- Suggest a design pattern only when the user’s design clearly matches a known intent.
+- Do not introduce patterns preemptively; patterns are opt-in, not default.
+- Always explain how the pattern solves the user's design problem.
+
+## Patterns to Consider
+- Strategy: Use when one type needs swappable behavior/algorithms behind a stable interface.
+- Adapter: Use when two interfaces must interoperate but you cannot (or should not) change either side.
+- Facade: Use when callers need a simplified, stable API over a complex subsystem.
+- Observer: Use when many consumers must react to changes without tight coupling.
+- Builder: Use when construction is complex/staged or many optional params need validation.
+- Command: Use when actions must be first-class (queue/log/undo/retry/compose) decoupled from the caller.
+- Decorator: Use when you need dynamic, stackable feature extensions without subclass explosion.
+- Factory Method: Use when the concrete type must be chosen by a creator at runtime.
+- Abstract Factory: Use when you must create compatible families of related objects without referencing concrete classes.
+- State: Use when state-driven behavior is causing widespread conditionals and duplicated logic.
+- Bridge: Use when a concept must vary along two independent axes (abstraction vs implementation).
+- Composite: Use when clients must treat individual objects and object trees uniformly.
+- Type Erasure: Use when you need value-semantics polymorphism over unrelated types with the same behavior.
+- Prototype: Use when you must clone via base pointers without slicing.
+- External Polymorphism: Use when you need runtime polymorphism for a type you can’t modify (wrap it).
+- Visitor: Use when you must add new operations across many existing types without modifying those types.
+- Flyweight: Use when many objects duplicate heavy immutable data and memory is the bottleneck.
+- CRTP: Use when you need compile-time polymorphism/shared interface with zero virtual dispatch.
+
+# Test Rules
+
+## GTest
+- Require the user to explicitly specify all intended test paths. Do not infer, assume or invent test paths; every path must be
 - Do not write raw `TEST()` blocks that repeat many similar `EXPECT_*` lines across tests.
 - If multiple tests share setup/data, use a test fixture (`TEST_F`) to centralize configuration.
 - Prefer table-driven, parameterized tests for IO-style behavior:
@@ -15,6 +55,37 @@
   - Create a base fixture for shared data/config.
   - Derive a param fixture: `class ParamTest : public BaseFixture, public ::testing::WithParamInterface<IOCase> {};`
   - Use `TEST_P(ParamTest, ...)` + `ValuesIn(...)`.
+
+# Naming Rules
+- snake_case: files, variables, namespaces
+- PascalCase: types, functions, concepts
+- Data members: trailing underscore
+- Constants / enum values: `kPascalCase`
+- Avoid unclear abbreviations; abbreviations should be consistently cased.
+
+# Comments Rules
+
+## General
+- Use `//` or `/* */` consistently within a file.
+- Comments must add information; do not restate the code.
+- Write complete sentences where practical; be consistent in tone/style.
+- TODOs must include a tracking ID (bug/task) and an owner (best contact).
+
+## Comment Levels
+- File-level: describe the set of user-facing abstractions provided by the file.
+- Class-level: describe purpose + intended usage; include a small example when non-obvious.
+- Declaration-level (API/DbC): document behavior and contract:
+  - what the function does
+  - inputs to outputs
+  - preconditions
+  - postconditions
+  - ownership / lifetime / nullability rules
+- Definition-level: do not duplicate declaration comments; add only implementation-specific notes.
+
+## Avoid argument comments by design
+- Do not rely on per-argument comments to explain meaning.
+- Prefer named constants over magic literals.
+- Prefer enums/strong types over boolean parameters.
 
 # C++ Rules
 
@@ -122,26 +193,3 @@
 ## Switch Statements
 - For switches on non-enum types: always include a `default:` case.
 - If `default:` is logically unreachable, it must fail fast (e.g., assert/log+abort).
-
-## Naming
-- snake_case: files, variables, namespaces
-- PascalCase: types, functions, concepts
-- Data members: trailing underscore
-- Constants / enum values: `kPascalCase`
-- Avoid unclear abbreviations; abbreviations should be consistently cased.
-
-## Comments
-- Use `//` or `/* */` consistently within a file.
-- Comments must add information; do not restate the code.
-- Write complete sentences where practical.
-- TODOs must include an owner and a tracking ID.
-- Files exposing user-facing APIs must include a brief file-level overview comment.
-- Non-obvious classes must have a purpose/usage comment (examples allowed).
-- Function declarations (in headers) must document:
-  - purpose/behavior
-  - ownership / lifetime expectations (if any)
-  - nullability rules for pointer params
-  - output/in-out semantics if applicable
-- Function definitions must not duplicate header comments; only add implementation-specific notes.
-- Prefer descriptive names over explanatory comments; comment only tricky logic blocks.
-- Avoid boolean parameters in public APIs; prefer enums/strong types.
