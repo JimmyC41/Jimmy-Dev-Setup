@@ -1,0 +1,147 @@
+# Unit Test Rules for GTest
+
+- Do not write raw `TEST()` blocks that repeat many similar `EXPECT_*` lines across tests.
+- If multiple tests share setup/data, use a test fixture (`TEST_F`) to centralize configuration.
+- Prefer table-driven, parameterized tests for IO-style behavior:
+  - Define `Input` and `Expected` structs.
+  - Define `IOCase { std::string name; Input in; Expected out; }`.
+  - Store cases in `std::vector<IOCase>` and feed via `ValuesIn(cases)`.
+  - Use a single `TEST_P` body that:
+    - reads `GetParam()`
+    - runs the unit under test on `in`
+    - asserts results match `out`
+    - uses `name` to label cases (via `INSTANTIATE_TEST_SUITE_P` naming).
+- If tests need shared setup + parameterization, combine patterns:
+  - Create a base fixture for shared data/config.
+  - Derive a param fixture: `class ParamTest : public BaseFixture, public ::testing::WithParamInterface<IOCase> {};`
+  - Use `TEST_P(ParamTest, ...)` + `ValuesIn(...)`.
+
+# C++ Rules
+
+## Headers
+- Every .h must compile on its own (include what you use).
+- Every .h must have an include guard or `#pragma once`.
+- Do not use forward declarations in place of required includes.
+- Only define functions in headers if the definition is trivially small (≈1–5 lines) and non-complex.
+- If a definition must live in a header and is non-trivial, it must be private (e.g., private methods) or in a namespace containing `internal`.
+- Include order (with exactly one blank line between non-empty groups):
+  1) Corresponding header
+  2) C system headers
+  3) C++ standard headers
+  4) Third-party headers
+  5) Project headers
+- Use project-relative include paths; use `<...>` only for standard/third-party libraries that require it.
+
+## Namespaces & Linkage
+- Do not write `using namespace ...;`.
+- Do not use inline namespaces.
+- Multi-line namespaces must end with a trailing comment: `}  // namespace foo`.
+- Prefer single-line nested namespace declarations: `namespace a::b { ... }`.
+- In .cc files, any symbol not needed outside the file must have internal linkage via an unnamed namespace.
+
+## Functions & Variables
+- Declare variables in the smallest possible scope.
+- Every local variable must be initialized at its declaration (no uninitialized locals).
+- Prefer return values over output parameters.
+- Do not return owning raw pointers.
+- Returning a raw pointer is allowed only when "nullable view" semantics are intended.
+- Optional inputs:
+  - Use `std::optional<T>` for optional by-value inputs.
+  - Use `const T*` for optional inputs when the non-optional form would be `const T&`.
+- Optional outputs:
+  - Use `T*` for optional output or in/out parameters (nullptr means "not provided").
+- Parameter order: all input-only parameters must come before any output/in-out parameters.
+- Avoid APIs that require an argument to outlive the call (no hidden lifetime coupling).
+- Prefer small, focused functions; if a function exceeds ~40 non-blank lines, refactor.
+- Use trailing return types only when ordinary syntax is impractical (e.g., lambdas or complex `decltype`).
+
+## Static & Global State
+- Avoid global functions; place nonmember functions in a namespace.
+- Do not create classes solely to group static members.
+- Global/static objects are allowed only if trivially destructible (no non-trivial global destructors).
+
+## Classes & Structs
+- Constructors must not call virtual methods.
+- Constructors must not perform work that can fail unless failure is representable without exceptions.
+- Single-argument constructors must be `explicit` unless implicit conversion is intended and safe.
+- Conversion operators must be `explicit`.
+- Only support copy/move when semantics are clear and correct.
+- Use `struct` only for passive aggregates (public data, minimal invariants).
+- Prefer a named `struct` over `std::pair`/`std::tuple` when fields have meaning.
+- Prefer composition; if inheriting, inheritance must be public.
+- Operator overloads must represent natural value semantics; do not use user-defined literals.
+- Class data members must be private unless they are `const` or in a test fixture.
+
+### Declaration Order (public first)
+- Group declarations by section: public, protected, private (in that order).
+- Within each section, order:
+  1) Types / aliases
+  2) Static constants
+  3) Factory functions
+  4) Constructors / assignment operators
+  5) Destructor
+  6) Other methods
+  7) Data members
+- Do not place large method bodies inline in class definitions.
+
+## Modern C++ Usage
+- Prefer smart pointers with single, explicit ownership.
+- Use rvalue references only for:
+  - move ctor / move assignment
+  - `&&`-qualified methods that consume `*this`
+  - perfect forwarding
+- Do not use exceptions.
+- Avoid RTTI (`dynamic_cast`, `typeid`) in production code.
+- Casts:
+  - Prefer C++ casts (`static_cast`, `const_cast`, etc.) or brace-init where appropriate.
+  - Avoid C-style casts `(T)x` unless unavoidable; `T(x)` only for class types.
+- Prefer prefix `++i/--i` unless postfix is required.
+- Streaming (`operator<<`) is allowed only for value-like types and must print user-visible values only.
+
+## Const & Compile-Time
+- For reference/pointer parameters that are not modified: use `const T&` or `const T*`.
+- Do not write `const` on by-value parameters in APIs (no effect for callers).
+- Mark methods `const` unless they change the object's logical state.
+- Use `constexpr` for true compile-time constants.
+- Use `constinit` to enforce constant initialization for non-constant globals/statics.
+
+## Types & Portability
+- Use fixed-width integers (e.g., `int32_t`) when size matters.
+- Use unsigned only for bitfields or modular arithmetic; avoid mixing signed/unsigned in APIs.
+- Floating point: use `float` or `double` only (no `long double`).
+- Do not rely on CPU-specific behavior or non-portable type sizes (`short`, `long`, `long long`).
+
+## Macros & Language Features
+- Avoid macros, especially in headers; prefer `constexpr`, `enum`, and inline functions.
+- Use `nullptr` (not `NULL`); use `'\0'` for null char.
+- Prefer `sizeof(var)` over `sizeof(type)`.
+- Use `auto` only when it improves readability (e.g., long iterator types) or avoids repetition; do not use it to hide important types.
+- Prefer explicit lambda captures when the lambda may outlive the current scope.
+- Avoid complex template metaprogramming.
+
+## Switch Statements
+- For switches on non-enum types: always include a `default:` case.
+- If `default:` is logically unreachable, it must fail fast (e.g., assert/log+abort).
+
+## Naming
+- snake_case: files, variables, namespaces
+- PascalCase: types, functions, concepts
+- Data members: trailing underscore
+- Constants / enum values: `kPascalCase`
+- Avoid unclear abbreviations; abbreviations should be consistently cased.
+
+## Comments
+- Use `//` or `/* */` consistently within a file.
+- Comments must add information; do not restate the code.
+- Write complete sentences where practical.
+- TODOs must include an owner and a tracking ID.
+- Files exposing user-facing APIs must include a brief file-level overview comment.
+- Non-obvious classes must have a purpose/usage comment (examples allowed).
+- Function declarations (in headers) must document:
+  - purpose/behavior
+  - ownership / lifetime expectations (if any)
+  - nullability rules for pointer params
+  - output/in-out semantics if applicable
+- Function definitions must not duplicate header comments; only add implementation-specific notes.
+- Prefer descriptive names over explanatory comments; comment only tricky logic blocks.
+- Avoid boolean parameters in public APIs; prefer enums/strong types.
