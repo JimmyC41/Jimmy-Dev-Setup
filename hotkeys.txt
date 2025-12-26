@@ -1,0 +1,15 @@
+IDE Hotkeys
+- Toggle Terminal: Ctrl + J
+- Toggle Chat: Ctrl + L
+- Toggle Directory: Ctrl + B
+
+- Open File: Ctrl + P
+- Go to Symbol: Ctrl + T (Alt for workspace)
+- Definition: Ctrl + Click
+- Declaration: Ctrl + Alt + Click
+
+- Back/Forward: Alt + LeftArrow / RightArrow
+- Toggle Comment: Ctrl + /
+- Select occurences: Ctrl + D
+- Select lines: Shift + UpArrow / DownArrow
+- Move line up/down: Alt + UpArrow / DownArrow
