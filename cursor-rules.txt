@@ -1,212 +1,171 @@
-# User Preferences
-- Write neutral, professional, concise bullet points; no emojis or exclamation marks; avoid narrative prose.
-- Do not write code unless explicitly requested by the user.
-- The user is the architect. Do not invent or modify APIs, interfaces, types, or module boundaries. Guide with questions, constraints, and tradeoffs.
-- If requirements are unclear: ask clarifying questions if missing information is blocking; otherwise, proceed with explicit assumptions.
+# Cursor Rules
+
+## Rule Precedence & Scope
+- Precedence order:
+  1) Explicit user instructions
+  2) Repository / project conventions
+  3) These rules
+- Enforce rules only when relevant to the user’s request and touched code.
+- Limit changes to requested files and scope unless explicitly approved.
+- If a rule conflicts with repo conventions or user intent, ask or defer.
+
+## User Ownership & Authority
+- The user owns architecture, APIs, interfaces, types, and module boundaries.
+- Do not invent or modify APIs, interfaces, or types unless explicitly instructed.
+- If an API change appears necessary, propose options and tradeoffs; do not implement without approval.
+- Guide via questions, constraints, and tradeoffs; implementation help is allowed.
+- Prefer the smallest change that satisfies the request; do not refactor unrelated code.
+
+## Interaction Discipline
+- Write neutral, professional, concise bullet points.
+- Avoid narrative prose, emojis, exclamation marks, and unnecessary summaries.
+- Do not write code unless explicitly requested.
+- If requirements are unclear:
+  - Ask clarifying questions only if blocking.
+  - Otherwise proceed with explicit assumptions.
 - Do not invent edge cases, failure modes, or test paths; ask the user to enumerate them.
-- Do not introduce premature abstractions unless a concrete second-use is stated.
-- Prefer conventional, idiomatic C++ solutions over clever techniques.
-- Mention non-obvious costs (allocation, copies, locking, cache effects) when relevant.
-- Avoid summaries or closing statements.
 
-# Rule Enforcement Model
-- All rules are proactive and self-applied by Cursor (including user edits in the current context).
-- Cursor flags violations, explains impact, and suggests the minimal fix.
-- Sections under # References are advisory only; Cursor may consult them when relevant but must not flag violations based solely on them.
+## Design & Abstractions
+- Do not introduce abstractions or patterns without a concrete second use.
+- Suggest design patterns only when the user’s design matches the pattern’s intent.
+- When suggesting a pattern: map problem → intent → fit (2–3 sentences).
+- Default to composition; justify inheritance when used.
+- Prefer conventional, idiomatic C++ over clever techniques.
+- Call out non-obvious costs only when relevant (allocation, copies, locking, cache effects).
 
-# System Design Rules
+## Dependency & API Design
+- Prefer not to expose third-party types in stable/public APIs.
+- If third-party types are already exposed, do not refactor without clear benefit and approval.
+- Confine third-party usage to a small number of well-defined adapter/module boundaries.
+- Apply Dependency Inversion: interfaces live with high-level policy.
+- Apply ISP: no interface should force unused methods.
 
-## General Principles
-- Public APIs must not mention third-party types.
-- Each third-party library must be confined to one adapter/module boundary.
-- ISP: No interface may require methods a consumer doesn’t use.
-- Dependency Inversion Principle: Put the interface in the module that contains the high-level policy, and have the lower-level module implement it.
+## Naming
+- Follow repository naming conventions if present.
+- Otherwise default to:
+  - Types, functions: PascalCase
+  - Variables, namespaces, filenames: lower_snake_case
+  - Private members: m_lower_snake_case
+  - Constants: kCamelCase
+  - Filenames: lower_snake_case (.h / .cc)
 
-## Design Patterns
-- Suggest patterns only when the user’s design matches the pattern’s intent; patterns are opt-in.
-- When suggesting, map problem → intent and explain how it solves it in 2–3 sentences.
+## Comments & Documentation
+- Comments must add information; never restate the code.
+- Use complete sentences; consistent tone.
+- TODOs require tracking ID and owner where applicable.
+- File-level: describe user-facing abstractions.
+- Class-level: purpose + intended usage; example if non-obvious.
+- Declaration-level (API/contract): behavior, inputs→outputs, pre/postconditions, ownership/lifetime/nullability.
+- Definition-level: implementation-specific notes only.
+- Prefer strong types and names over per-argument comments; parameter docs acceptable for public APIs when needed.
 
-# Naming Rules
-- Types: PascalCase
-- Functions: PascalCase
-- Variables: lower_snake_case
-- Private data members: lower_snake_case with an `m_` prefix
-- Constants: kCamelCase
-- Namespaces: lower_snake_case
-- Filenames: lower_snake_case (.h for headers, .cc for sources)
+## Logging & Observability
+- Logs must allow reconstruction of end-to-end flow and decisions.
+- Non-trivial logs require correlation context (stable ID + phase + minimal state).
+- Flag hot-path risks (formatting, allocations, volume); log at boundaries or decisions.
+- Flag non-actionable logs (generic, duplicated, low-signal).
+- Avoid logging secrets or sensitive data.
 
-# Comments Rules
-
-## General
-- Comments must add information; do not restate the code.
-- Write complete sentences where practical; be consistent in tone and style.
-- TODOs must include a tracking ID (bug/task) and an owner (best contact).
-
-## Comment Levels
-- File-level: describe the set of user-facing abstractions provided by the file.
-- Class-level: describe purpose and intended usage; include a small example when non-obvious.
-- Declaration-level (API/DbC): document behavior and contract:
-  - what the function does
-  - inputs to outputs
-  - preconditions
-  - postconditions
-  - ownership / lifetime / nullability rules
-- Definition-level: do not duplicate declaration comments; add only implementation-specific notes.
-
-## Avoid argument comments by design
-- Do not rely on per-argument comments to explain meaning.
-- Prefer named constants over magic literals.
-- Prefer enums/strong types over boolean parameters.
-
-# Log Rules
-- Ask: "Can I reconstruct the end-to-end flow and why decisions were made from these logs?"
-- Require correlation context on non-trivial logs: stable ID + phase + minimal relevant state.
-- Flag hot-path risk: expensive formatting/allocations or high volume; push logs to decision points or boundaries.
-- Flag non-actionable logs: generic text, duplicates, or logs that don’t reduce the debugging search space.
-
-# C++ Rules
-
-## Headers
-- Every .h must compile on its own (include what you use).
-- Every .h must have an include guard or `#pragma once`.
-- Forward declare in headers when you only store pointers/references and don’t need the complete type; include in the .cc.
-- Public headers should not contain non-trivial method bodies. Allow trivial inline accessors, small constexpr functions, and template definitions where required.
-- Include order (with exactly one blank line between non-empty groups):
+## C++: Headers & Structure
+- Every .h must compile standalone and use include guards or #pragma once.
+- Include what you use; forward declare only when storing pointers/references.
+- Public headers should not contain non-trivial method bodies.
+  - Exception: templates, header-only code, or trivial inline functions.
+- Include order with one blank line between groups:
   1) Corresponding header
-  2) C system headers
+  2) C headers
   3) C++ standard headers
   4) Third-party headers
   5) Project headers
-- Use project-relative include paths; use `<...>` only for standard/third-party libraries that require it.
+- Use project-relative includes; <...> only for standard or required third-party headers.
 
-## Namespaces & Linkage
-- Do not write `using namespace ...;`.
-- Multi-line namespaces must end with a trailing comment: `}  // namespace foo`.
-- Prefer single-line nested namespace declarations: `namespace a::b { ... }`.
-- In .cc files, any symbol not needed outside the file must have internal linkage via an unnamed namespace.
+## C++: Namespaces & Linkage
+- Avoid symbols in the global namespace; use named namespaces.
+- Never use `using namespace`.
+- Close multi-line namespaces with trailing comments.
+- Prefer single-line nested namespace syntax.
+- In .cc files, give file-local symbols internal linkage (unnamed namespace).
 
-## Functions & Variables
-- Declare variables in the smallest possible scope.
-- Every local variable must be initialized at its declaration (no uninitialized locals).
+## C++: Functions & Parameters
+- Declare variables in the smallest scope; always initialize locals.
 - Prefer return values over output parameters.
-- Do not return owning raw pointers.
-- Returning a raw pointer is allowed only when "nullable view" semantics are intended.
+- Avoid owning raw pointers.
+- Use references for non-null inputs; pointers for nullable or optional semantics.
 - Optional inputs:
-  - Use `std::optional<T>` for optional by-value inputs.
-  - Use `const T*` for optional inputs when the non-optional form would be `const T&`.
-- Optional outputs:
-  - Use `T*` for optional output or in/out parameters (nullptr means "not provided").
-- Parameter order: all input-only parameters must come before any output/in-out parameters.
-- Avoid APIs that require an argument to outlive the call (no hidden lifetime coupling).
-- If a function has multiple responsibilities or nested conditionals, let the user know.
-- Use trailing return types only when ordinary syntax is impractical (e.g., lambdas or complex `decltype`).
+  - std::optional<T> for by-value
+  - const T* when the non-optional form is const T&
+- Optional outputs/in-out: T* (nullptr = not provided).
+- Input-only parameters precede output/in-out parameters.
+- Avoid hidden lifetime coupling across calls.
+- Flag functions with multiple responsibilities or deep nesting.
+- Use trailing return types only when ordinary syntax is impractical.
 
-## Static & Global State
-- Avoid global functions; place nonmember functions in a namespace.
+## C++: State & Lifetime
+- Avoid symbols in the global namespace.
 - Do not create classes solely to group static members.
-- Global/static objects are allowed only if trivially destructible (no non-trivial global destructors).
+- Global/static objects allowed only if trivially destructible or with clear shutdown ordering.
 
-## Classes & Structs
-- Constructors must not call virtual methods.
-- Constructors must not perform work that can fail unless failure is representable without exceptions.
-- Single-argument constructors must be `explicit` unless implicit conversion is intended and safe.
-- Conversion operators must be `explicit`.
-- Only support copy/move when semantics are clear and correct.
-- Use `struct` only for passive aggregates (public data, minimal invariants).
-- Prefer a named `struct` over `std::pair`/`std::tuple` when fields have meaning.
-- Prefer composition; if inheriting, inheritance must be public.
-- Operator overloads must represent natural value semantics; do not use user-defined literals.
-- Class data members must be private unless they are `const` or in a test fixture.
+## C++: Classes
+- Constructors must not call virtual functions.
+- Constructors must not perform failing work unless failure is representable by the project’s error model.
+- Single-argument constructors and conversion operators must be explicit unless intentional and safe.
+- Support copy/move only when semantics are correct.
+- Use struct only for passive aggregates.
+- Prefer named structs over pair/tuple.
+- Operator overloads must reflect natural value semantics.
+- Data members must be private unless const or in test fixtures.
 
-### Declaration Order (public first)
-- Group declarations by section: public, protected, private (in that order).
-- Within each section, order:
-  1) Types / aliases
-  2) Static constants
-  3) Factory functions
-  4) Constructors / assignment operators
-  5) Destructor
-  6) Other methods
-  7) Data members
-- Do not place large method bodies inline in class definitions.
+## C++: Declaration Order (public → protected → private)
+1) Types/aliases
+2) Static constants
+3) Factory functions
+4) Constructors/assignments
+5) Destructor
+6) Other methods
+7) Data members
+- Do not place large method bodies inline.
 
-## Modern C++ Usage
+## C++: Modern Usage
 - Prefer smart pointers with single, explicit ownership.
-- Use rvalue references only for:
-  - move ctor / move assignment
-  - `&&`-qualified methods that consume `*this`
-  - perfect forwarding
-- Avoid RTTI (`dynamic_cast`, `typeid`) in production code.
-- Casts:
-  - Prefer C++ casts (`static_cast`, `const_cast`, etc.) or brace-init where appropriate.
-  - Avoid C-style casts `(T)x` unless unavoidable; `T(x)` only for class types.
-- Prefer prefix `++i/--i` unless postfix is required.
-- Streaming (`operator<<`) is allowed only for value-like types and must print user-visible values only.
+- Use rvalue references only for move ops, &&-qualified consumers, or perfect forwarding.
+- Avoid RTTI unless required.
+- Prefer C++ casts; avoid C-style casts.
+- Prefer prefix ++/-- unless postfix is required.
+- operator<< only for value-like, user-visible types.
 
-## Const & Compile-Time
-- For reference/pointer parameters that are not modified: use `const T&` or `const T*`.
-- Do not write `const` on by-value parameters in APIs (no effect for callers).
-- Mark methods `const` unless they change the object's logical state.
-- Use `constexpr` for true compile-time constants.
-- Use `constinit` to enforce constant initialization for non-constant globals/statics.
+## C++: Const & Compile-Time
+- Use const T& / const T* for unmodified reference/pointer parameters.
+- Do not add const to by-value parameters in public APIs.
+- Mark methods const unless logical state changes.
+- Use constexpr only for true compile-time constants.
+- Use constinit for non-constant globals/statics.
 
 ## Types & Portability
-- Use fixed-width integers (e.g., `int32_t`) when size matters.
-- Use unsigned only for bitfields or modular arithmetic; avoid mixing signed/unsigned in APIs.
-- Floating point: use `float` or `double` only (no `long double`).
-- Do not rely on CPU-specific behavior or non-portable type sizes (`short`, `long`, `long long`).
+- Use fixed-width integers when size matters.
+- Use unsigned only for bitfields or modular arithmetic.
+- Use float or double only.
+- Avoid reliance on non-portable type sizes or CPU-specific behavior.
 
-## Macros & Language Features
-- Avoid macros, especially in headers; prefer `constexpr`, `enum`, and inline functions.
-- Use `nullptr` (not `NULL`); use `'\0'` for null char.
-- Prefer `sizeof(var)` over `sizeof(type)`.
-- Use `auto` only when it improves readability (e.g., long iterator types) or avoids repetition; do not use it to hide important types.
-- Prefer explicit lambda captures when the lambda may outlive the current scope.
+## C++: Macros & Language Features
+- Avoid macros, especially in headers.
+- Use nullptr (not NULL); use '\0' for null char.
+- Prefer sizeof(var) over sizeof(type) unless clarity requires otherwise.
+- Use auto only when it improves readability or avoids repetition.
+- Prefer explicit lambda captures when lifetimes may extend.
 
-## Switch Statements
-- For switches on non-enum types: always include a `default:` case.
-- If `default:` is logically unreachable, it must fail fast (e.g., assert/log+abort).
+## C++: Switch Statements
+- Non-enum switches require a default case.
+- If default is unreachable, fail fast (assert or log+abort).
 
-# Test Rules
-
-## GTest
-- Require the user to explicitly specify all intended test paths.
-- If test paths are not specified, ask for: happy path, boundary, invalid input, error propagation, and concurrency.
-- No sleep or time-based asserts; prefer deterministic fakes/clocks and explicit synchronization.
-- Do not write raw `TEST()` blocks that repeat many similar `EXPECT_*` lines across tests.
-- If multiple tests share setup/data, use a test fixture (`TEST_F`) to centralize configuration.
+## Unit Testing
+- Require the user to specify intended test paths.
+- If missing, ask the user to enumerate relevant categories (e.g., happy path, boundaries, invalid input, error propagation, concurrency).
+- Do not add test cases beyond what the user confirms.
+- No sleeps or time-based asserts; use deterministic fakes or clocks.
+- Avoid repeated raw TEST() blocks with similar EXPECTs.
+- Use fixtures for shared setup.
 - Prefer table-driven, parameterized tests for IO-style behavior:
-  - Define `Input` and `Expected` structs.
-  - Define `IOCase { std::string name; Input in; Expected out; }`.
-  - Store cases in `std::vector<IOCase>` and feed via `ValuesIn(cases)`.
-  - Use a single `TEST_P` body that:
-    - reads `GetParam()`
-    - runs the unit under test on `in`
-    - asserts results match `out`
-    - uses `name` to label cases (via `INSTANTIATE_TEST_SUITE_P` naming).
-- If tests need shared setup + parameterization, combine patterns:
-  - Create a base fixture for shared data/config.
-  - Derive a param fixture: `class ParamTest : public BaseFixture, public ::testing::WithParamInterface<IOCase> {};`
-  - Use `TEST_P(ParamTest, ...)` + `ValuesIn(...)`.
-
-# References
-
-## Design Patterns to Consider
-- Strategy: Use when one type needs swappable behavior/algorithms behind a stable interface.
-- Adapter: Use when two interfaces must interoperate but you cannot (or should not) change either side.
-- Facade: Use when callers need a simplified, stable API over a complex subsystem.
-- Observer: Use when many consumers must react to changes without tight coupling.
-- Builder: Use when construction is complex/staged or many optional parameters need validation.
-- Command: Use when actions must be first-class (queue/log/undo/retry/compose) and decoupled from the caller.
-- Decorator: Use when you need dynamic, stackable feature extensions without subclass explosion.
-- Factory Method: Use when the concrete type must be chosen by a creator at runtime.
-- Abstract Factory: Use when you must create compatible families of related objects without referencing concrete classes.
-- State: Use when state-driven behavior is causing widespread conditionals and duplicated logic.
-- Bridge: Use when a concept must vary along two independent axes (abstraction vs implementation).
-- Composite: Use when clients must treat individual objects and object trees uniformly.
-- Type Erasure: Use when you need value-semantics polymorphism over unrelated types with the same behavior.
-- Prototype: Use when you must clone via base pointers without slicing.
-- External Polymorphism: Use when you need runtime polymorphism for a type you can’t modify (wrap it).
-- Visitor: Use when you must add new operations across many existing types without modifying those types.
-- Flyweight: Use when many objects duplicate heavy immutable data and memory is the bottleneck.
-- CRTP: Use when you need compile-time polymorphism/shared interface with zero virtual dispatch.
+  - Input / Expected structs
+  - IOCase { name, in, out }
+  - Single TEST_P over ValuesIn(cases)
+- For shared setup + params, combine base fixture with WithParamInterface.
