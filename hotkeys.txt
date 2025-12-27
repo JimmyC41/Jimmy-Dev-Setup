@@ -13,3 +13,26 @@ IDE Hotkeys
 - Select occurences: Ctrl + D
 - Select lines: Shift + UpArrow / DownArrow
 - Move line up/down: Alt + UpArrow / DownArrow
+
+# Log Hotkeys
+
+General Workflow
+- less -S app.log
+- G, than Ctrl + g to see total lines
+- /search for semantic anchors
+- Discover the ID
+- Exit less
+- Grep the ID and pipe to less: grep 'ID' app.log | less
+
+Navigation
+- g/G: Start/End of File
+- j/k: Down/Up one line
+- Space: Down one page
+- b: Up one page
+- q: Quit
+
+Searching
+- /pattern: Search forward
+- ?pattern: Search backward
+- n: Next match in the same direction
+- N: Previous match in the opposite direction
